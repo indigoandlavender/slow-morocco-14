@@ -30,6 +30,11 @@ export interface Journey {
   region: string | null;
   tags: string | null;
   tagline: string | null;
+  route_cities: string | null;
+  accessibility_notes: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  hero_image: string | null;
   published: boolean;
   show_on_journeys_page: boolean;
   featured_on_homepage: boolean;
@@ -251,6 +256,8 @@ export interface DayTrip {
   includes: string | null;
   excludes: string | null;
   meeting_point: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
   published: boolean;
   created_at: string;
   updated_at: string;
@@ -381,6 +388,10 @@ export interface Place {
   body: string | null;
   sources: string | null;
   tags: string | null;
+  name: string | null;
+  tagline: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
   published: boolean;
   featured: boolean;
   sort_order: number | null;
@@ -493,6 +504,10 @@ export interface Story {
   era: string | null;
   era_start: number | null;
   era_end: number | null;
+  related_place_slugs: string | null;
+  related_story_slugs: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
   created_at: string;
   updated_at: string;
 }
