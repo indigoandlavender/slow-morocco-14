@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Terracotta background -->
+  <rect width="512" height="512" fill="#A67C5B"/>
+  
+  <!-- Yaz (ⵣ) symbol as path/journey - white -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Main vertical stem -->
+    <line x1="256" y1="420" x2="256" y2="200"/>
+    <!-- Left branch -->
+    <line x1="256" y1="200" x2="156" y2="100"/>
+    <!-- Right branch -->
+    <line x1="256" y1="200" x2="356" y2="100"/>
+  </g>
+</svg>

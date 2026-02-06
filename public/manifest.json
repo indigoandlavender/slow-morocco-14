@@ -1,0 +1,16 @@
+{
+  "name": "Festivals Morocco",
+  "short_name": "Festivals",
+  "description": "Discover art exhibitions, cultural festivals, music events, and heritage celebrations across Morocco.",
+  "start_url": "/en",
+  "display": "standalone",
+  "background_color": "#faf9f7",
+  "theme_color": "#E53935",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
