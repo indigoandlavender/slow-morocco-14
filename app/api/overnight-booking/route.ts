@@ -42,6 +42,7 @@ export async function POST(request: Request) {
       total_price: totalPrice || null,
       currency: currency || "EUR",
       notes: notes || "",
+      status: "pending",
     });
 
     return NextResponse.json({
