@@ -27,6 +27,9 @@ export interface Journey {
   destinations: string | null;
   journey_type: string | null;
   marketing_priority: string | null;
+  region: string | null;
+  tags: string | null;
+  tagline: string | null;
   published: boolean;
   show_on_journeys_page: boolean;
   featured_on_homepage: boolean;
