@@ -1,59 +1,59 @@
 import { NextResponse } from "next/server";
-import { createOvernightBooking } from "@/lib/supabase";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+import { appendSheetData } from "@/lib/sheets";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-
+    
     const {
+      experienceTitle,
+      tripDate,
       guestName,
       guestEmail,
-      property,
-      roomType,
-      checkIn,
-      checkOut,
-      guests,
-      totalPrice,
-      currency,
+      guestPhone,
+      pickupLocation,
       notes,
+      subtotalEUR,
+      handlingFeeEUR,
+      totalEUR,
+      transactionId,
     } = body;
 
-    if (!guestName || !guestEmail || !property || !checkIn || !checkOut) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
+    // Generate booking reference
+    const timestamp = Date.now();
+    const bookingRef = `ON-${timestamp}`;
+    const createdAt = new Date().toISOString();
 
-    const bookingId = `OVN-${Date.now()}`;
+    // Prepare row for Google Sheets
+    const row = [
+      bookingRef,
+      createdAt,
+      experienceTitle,
+      tripDate,
+      guestName,
+      guestEmail,
+      guestPhone || "",
+      pickupLocation,
+      notes || "",
+      subtotalEUR,
+      handlingFeeEUR,
+      totalEUR,
+      transactionId,
+      "confirmed",
+    ];
 
-    await createOvernightBooking({
-      booking_id: bookingId,
-      guest_name: guestName,
-      guest_email: guestEmail,
-      property,
-      room_type: roomType || "",
-      check_in: checkIn,
-      check_out: checkOut,
-      guests: guests || 1,
-      total_price: totalPrice || null,
-      currency: currency || "EUR",
-      notes: notes || "",
-      status: "pending",
-    });
+    // Append to Overnight_Bookings sheet
+    await appendSheetData("Overnight_Bookings", [row]);
 
     return NextResponse.json({
       success: true,
-      bookingId,
-      message: "Booking request received. We'll confirm within 24 hours.",
+      bookingRef,
+      message: "Booking confirmed",
     });
-  } catch (error) {
-    console.error("Error creating overnight booking:", error);
+  } catch (error: any) {
+    console.error("Overnight booking error:", error);
     return NextResponse.json(
-      { error: "Failed to create booking" },
+      { success: false, error: error.message },
       { status: 500 }
     );
   }

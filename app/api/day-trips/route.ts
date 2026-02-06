@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDayTrips, getDayTripAddons, getWebsiteSettingByKey } from "@/lib/supabase";
+import { getDayTrips, getDayTripAddons } from "@/lib/supabase";
+import { getSheetData, convertDriveUrl } from "@/lib/sheets";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -7,13 +8,18 @@ export const revalidate = 0;
 export async function GET() {
   try {
     // Get day trips and addons from Supabase
-    const [dayTrips, addons, heroSetting] = await Promise.all([
-      getDayTrips({ published: true }),
-      getDayTripAddons(),
-      getWebsiteSettingByKey("day_trips_hero_image"),
-    ]);
+    const dayTrips = await getDayTrips({ published: true });
+    const addons = await getDayTripAddons();
     
-    const heroImage = heroSetting?.value || "";
+    // Get hero image from settings (still from Google Sheets)
+    let heroImage = "";
+    try {
+      const settings = await getSheetData("Website_Settings");
+      const heroSetting = settings.find((s: any) => s.Key === "day_trips_hero_image");
+      heroImage = heroSetting ? convertDriveUrl(heroSetting.Value || "") : "";
+    } catch (e) {
+      console.error("Error fetching settings:", e);
+    }
     
     // Format day trips
     const formattedTrips = dayTrips.map((t) => ({
@@ -35,22 +41,23 @@ export async function GET() {
     // Format addons
     const formattedAddons = addons.map((a) => ({
       id: a.addon_id || "",
-      tripSlug: a.applies_to || "",
-      title: a.addon_name || "",
+      name: a.addon_name || "",
       description: a.description || "",
       priceMAD: a.final_price_mad_pp || 0,
       priceEUR: a.final_price_eur_pp || 0,
+      appliesTo: (a.applies_to || "").split("|").filter(Boolean),
     }));
 
     return NextResponse.json({
+      success: true,
+      heroImage,
       dayTrips: formattedTrips,
       addons: formattedAddons,
-      heroImage,
     });
-  } catch (error) {
-    console.error("Error fetching day trips:", error);
+  } catch (error: any) {
+    console.error("Day trips fetch error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch day trips" },
+      { success: false, heroImage: "", dayTrips: [], addons: [], error: error.message },
       { status: 500 }
     );
   }

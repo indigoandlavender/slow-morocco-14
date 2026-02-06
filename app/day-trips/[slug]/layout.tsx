@@ -1,52 +1,90 @@
-import { getDayTripBySlug } from "@/lib/supabase";
 import { Metadata } from "next";
+import { getSheetData, convertDriveUrl } from "@/lib/sheets";
 
-type Props = {
-  params: { slug: string };
-  children: React.ReactNode;
-};
+interface DayTripData {
+  Slug: string;
+  Title: string;
+  Description?: string;
+  HeroImage?: string;
+  Duration?: string;
+  FromCity?: string;
+  Price?: string;
+}
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+async function getDayTrip(slug: string): Promise<DayTripData | null> {
   try {
-    const dayTrip = await getDayTripBySlug(params.slug);
-
-    if (!dayTrip) {
-      return {
-        title: "Day Trip Not Found | Slow Morocco",
-        description: "This day trip could not be found.",
-      };
-    }
-
-    const title = dayTrip.seo_title || `${dayTrip.title} | Day Trips | Slow Morocco`;
-    const description =
-      dayTrip.seo_description || dayTrip.short_description || dayTrip.title;
-    const imageUrl = dayTrip.hero_image_url || "";
-
-    return {
-      title,
-      description,
-      openGraph: {
-        title,
-        description,
-        images: imageUrl ? [{ url: imageUrl }] : [],
-        type: "website",
-      },
-      twitter: {
-        card: "summary_large_image",
-        title,
-        description,
-        images: imageUrl ? [imageUrl] : [],
-      },
-    };
+    const dayTrips = await getSheetData("DayTrips");
+    const trip = dayTrips.find(
+      (t: any) => t.Slug === slug && t.Published?.toLowerCase() === "true"
+    );
+    return trip || null;
   } catch (error) {
-    console.error("Error generating day trip metadata:", error);
-    return {
-      title: "Day Trip | Slow Morocco",
-      description: "Day trips from Marrakech",
-    };
+    console.error("Error fetching day trip for metadata:", error);
+    return null;
   }
 }
 
-export default function DayTripLayout({ children }: Props) {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const trip = await getDayTrip(slug);
+
+  if (!trip) {
+    return {
+      title: "Day Trip Not Found",
+      description: "The requested day trip could not be found.",
+    };
+  }
+
+  const title = trip.Title;
+  const description = trip.Description?.slice(0, 160) || 
+    `${trip.Title} - a private day trip from ${trip.FromCity || 'Marrakech'} with Slow Morocco.`;
+  const heroImage = trip.HeroImage ? convertDriveUrl(trip.HeroImage) : null;
+
+  return {
+    title: title,
+    description: description,
+    keywords: [
+      "morocco day trip",
+      trip.FromCity?.toLowerCase(),
+      "private day trip morocco",
+      "marrakech excursion",
+    ].filter((k): k is string => Boolean(k)),
+    openGraph: {
+      title: `${title} | Slow Morocco`,
+      description: description,
+      url: `https://slowmorocco.com/day-trips/${slug}`,
+      type: "website",
+      images: heroImage
+        ? [
+            {
+              url: heroImage,
+              width: 1200,
+              height: 630,
+              alt: title,
+            },
+          ]
+        : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | Slow Morocco`,
+      description: description,
+      images: heroImage ? [heroImage] : undefined,
+    },
+    alternates: {
+      canonical: `https://slowmorocco.com/day-trips/${slug}`,
+    },
+  };
+}
+
+export default function DayTripLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return <>{children}</>;
 }

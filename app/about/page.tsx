@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Metadata } from "next";
-import { getWebsiteSettings, getWebsiteTeam } from "@/lib/supabase";
+import { getSheetData, convertDriveUrl } from "@/lib/sheets";
 
 export const metadata: Metadata = {
   title: "About Us | Slow Morocco",
@@ -32,22 +32,33 @@ interface TeamMember {
 
 async function getAboutContent() {
   try {
-    const settingsData = await getWebsiteSettings();
+    const settingsData = await getSheetData("Website_Settings");
     const settings: { [key: string]: string } = {};
-    settingsData.forEach((row) => {
-      if (row.key) settings[row.key] = row.value || "";
+    settingsData.forEach((row: any) => {
+      if (row.Key) settings[row.Key] = row.Value || "";
     });
 
-    const teamData = await getWebsiteTeam({ published: true });
+    const teamData = await getSheetData("Website_Team");
     const team = teamData
-      .sort((a, b) => (a.sort_order || 99) - (b.sort_order || 99))
-      .map((t) => ({
-        id: t.team_id || "",
-        name: t.name || "",
-        role: t.role || "",
-        quote: t.quote || "",
-        bio: t.bio || "",
-        image: t.image_url || "",
+      .filter((t: any) => {
+        const pub = String(t.Published || "").toLowerCase().trim();
+        return pub === "true" || pub === "yes" || pub === "1";
+      })
+      .sort(
+        (a: any, b: any) =>
+          (parseInt(a.Order) || 99) - (parseInt(b.Order) || 99)
+      )
+      .map((t: any) => ({
+        id: t.Team_ID || "",
+        name: t.Name || "",
+        role: t.Role || "",
+        quote: t.Quote || "",
+        bio: t.Bio || "",
+        image: t.Image_URL
+          ? t.Image_URL.startsWith("/")
+            ? t.Image_URL
+            : convertDriveUrl(t.Image_URL)
+          : "",
       }));
 
     return {

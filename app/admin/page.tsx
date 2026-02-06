@@ -105,10 +105,16 @@ export default function AdminDashboard() {
               <p className="text-sm">Journeys</p>
             </Link>
             <Link
-              href="/admin/icons"
+              href="/admin/accommodations"
               className="p-4 border border-border hover:border-foreground transition-colors text-center"
             >
-              <p className="text-sm">Icons</p>
+              <p className="text-sm">Accommodations</p>
+            </Link>
+            <Link
+              href="/admin/content"
+              className="p-4 border border-border hover:border-foreground transition-colors text-center"
+            >
+              <p className="text-sm">Content Library</p>
             </Link>
             <Link
               href="/admin/settings"

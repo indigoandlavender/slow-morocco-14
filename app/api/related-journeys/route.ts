@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getJourneys } from "@/lib/supabase";
+import { google } from "googleapis";
+import { findRelatedJourneys } from "@/lib/content-matcher";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID;
+
+async function getAuthClient() {
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    },
+    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+  });
+  return auth;
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const region = searchParams.get("region") || "";
   const tags = searchParams.get("tags") || "";
-  const excludeSlug = searchParams.get("exclude") || "";
+  const category = searchParams.get("category") || "";
   const limit = parseInt(searchParams.get("limit") || "3");
 
   if (!region && !tags) {
@@ -16,36 +27,50 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const journeys = await getJourneys({ published: true });
+    const auth = await getAuthClient();
+    const sheets = google.sheets({ version: "v4", auth });
 
-    // Filter by region or tags
-    const tagList = tags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+    // Fetch all journeys
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: "Website_Journeys!A:Z",
+    });
 
-    const related = journeys
-      .filter((j) => {
-        // Exclude current journey
-        if (excludeSlug && j.slug === excludeSlug) return false;
+    const rows = response.data.values || [];
+    if (rows.length < 2) {
+      return NextResponse.json({ journeys: [] });
+    }
 
-        // Match by region
-        if (region && j.region?.toLowerCase() === region.toLowerCase()) return true;
+    const headers = rows[0].map((h: string) => h.toLowerCase().replace(/\s+/g, "_"));
+    const journeys = rows.slice(1).map((row) => {
+      const journey: Record<string, string> = {};
+      headers.forEach((header: string, index: number) => {
+        journey[header] = row[index] || "";
+      });
+      return journey;
+    });
 
-        // Match by tags
-        if (tagList.length > 0) {
-          const journeyTags = (j.tags || "").toLowerCase();
-          return tagList.some((tag) => journeyTags.includes(tag));
-        }
+    // Filter to published journeys only
+    const publishedJourneys = journeys.filter(
+      (j) => j.published?.toLowerCase() === "true" || j.published === "TRUE"
+    );
 
-        return false;
-      })
-      .slice(0, limit)
-      .map((j) => ({
+    // Find related journeys
+    const related = findRelatedJourneys(
+      region,
+      tags,
+      category,
+      publishedJourneys.map((j) => ({
         slug: j.slug,
         title: j.title,
-        tagline: j.tagline || j.short_description || "",
-        heroImage: j.hero_image_url || "",
-        duration: j.duration_days || 0,
-        region: j.region || "",
-      }));
+        destinations: j.destinations,
+        focus: j.focus_type || j.focus,
+        heroImage: j.hero_image_url || j.heroimage,
+        duration: parseInt(j.duration_days) || 0,
+        price: parseInt(j.price_eur) || 0,
+      })),
+      limit
+    );
 
     return NextResponse.json({ journeys: related });
   } catch (error) {
